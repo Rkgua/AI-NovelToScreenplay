@@ -19,7 +19,7 @@ console = Console(force_terminal=False, legacy_windows=False)
 def convert(
     source: str = typer.Argument(..., help="小说文件路径 (epub / txt / md)"),
     output: str = typer.Option("output/screenplay.yaml", "--output", "-o", help="输出 YAML 文件路径"),
-    model: str = typer.Option("openai", "--model", "-m", help="LLM 服务商 (openai / claude / ollama)"),
+    model: str = typer.Option("deepseek", "--model", "-m", help="LLM 服务商 (openai / deepseek / claude / ollama)"),
     title: str = typer.Option("", "--title", "-t", help="剧本标题（默认取自文件名）"),
     author: str = typer.Option("", "--author", "-a", help="原作者"),
     chapters: str = typer.Option("", "--chapters", "-c", help="指定章节范围，如 1-5"),
@@ -117,16 +117,10 @@ def launch(
     ui = create_ui()
     console.print(f"[bold]Web UI starting at: http://127.0.0.1:{port}[/bold]")
     ui.launch(
+        server_name="127.0.0.1",
         server_port=port,
         share=share,
-        inbrowser=True,
-        css=(
-            ".yaml-preview textarea {"
-            "  font-family: 'Cascadia Code', 'Consolas', monospace !important;"
-            "  font-size: 13px;"
-            "}"
-        ),
-        theme="soft",
+        inbrowser=False,
     )
 
 

@@ -54,23 +54,39 @@ class OpenAIAdapter(BaseLLMAdapter):
         messages: list[dict[str, Any]] = []
         if system:
             messages.append({"role": "system", "content": system})
-        messages.append({"role": "user", "content": prompt})
+
+        is_deepseek = self.config.provider == "deepseek"
+
+        if is_deepseek:
+            schema_str = json.dumps(schema, ensure_ascii=False, indent=2)
+            user_message = (
+                f"{prompt}\n\n"
+                f"你必须严格按以下 JSON Schema 输出 JSON，不要输出任何额外内容：\n"
+                f"```json\n{schema_str}\n```"
+            )
+            messages.append({"role": "user", "content": user_message})
+        else:
+            messages.append({"role": "user", "content": prompt})
 
         try:
-            resp = self._client.chat.completions.create(
-                model=self.config.model,
-                messages=messages,
-                temperature=self.config.temperature,
-                max_tokens=self.config.max_tokens,
-                response_format={
+            kwargs: dict[str, Any] = {
+                "model": self.config.model,
+                "messages": messages,
+                "temperature": self.config.temperature,
+                "max_tokens": self.config.max_tokens,
+            }
+            if is_deepseek:
+                kwargs["response_format"] = {"type": "json_object"}
+            else:
+                kwargs["response_format"] = {
                     "type": "json_schema",
                     "json_schema": {
                         "name": schema.get("title", "structured_output"),
                         "strict": True,
                         "schema": schema,
                     },
-                },
-            )
+                }
+            resp = self._client.chat.completions.create(**kwargs)
         except Exception as e:
             raise LLMError(f"OpenAI 结构化调用失败: {e}") from e
 

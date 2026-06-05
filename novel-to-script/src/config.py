@@ -39,6 +39,13 @@ class LLMConfig:
                     model=os.getenv("N2S_CLAUDE_MODEL", "claude-sonnet-4-20250514"),
                     api_key=os.getenv("ANTHROPIC_API_KEY", ""),
                 )
+            case "deepseek":
+                return cls(
+                    provider="deepseek",
+                    model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+                    api_key=os.getenv("DEEPSEEK_API_KEY", ""),
+                    api_base="https://api.deepseek.com",
+                )
             case "ollama":
                 return cls(
                     provider="ollama",

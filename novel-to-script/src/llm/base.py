@@ -92,7 +92,7 @@ class BaseLLMAdapter(ABC):
 def create_adapter(config: LLMConfig) -> BaseLLMAdapter:
     """根据 LLMConfig 创建对应的适配器实例。"""
     match config.provider:
-        case "openai":
+        case "openai" | "deepseek":
             from .openai_adapter import OpenAIAdapter
 
             return OpenAIAdapter(config)

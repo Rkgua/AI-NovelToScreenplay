@@ -33,9 +33,9 @@ def create_ui() -> gr.Blocks:
                 )
 
                 model_choice = gr.Dropdown(
-                    choices=["openai", "claude", "ollama"],
-                    value="openai",
-                    label="🤖 LLM 服务商",
+                    choices=["deepseek", "openai", "claude", "ollama"],
+                    value="deepseek",
+                    label="LLM 服务商",
                 )
 
                 model_name = gr.Textbox(
