@@ -112,6 +112,11 @@ def launch(
     port: int = typer.Option(7860, "--port", "-p", help="监听端口"),
 ) -> None:
     """启动 Gradio Web UI。"""
+    import os as _os
+    for _key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
+        _os.environ.pop(_key, None)
+    _os.environ["no_proxy"] = "127.0.0.1,localhost"
+
     from .web import create_ui
 
     ui = create_ui()
