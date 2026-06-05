@@ -112,6 +112,30 @@ def validate(
             console.print(f"  [yellow]⚠ {w}[/yellow]")
 
 
+@app.command()
+def launch(
+    share: bool = typer.Option(False, "--share", help="生成公开分享链接"),
+    port: int = typer.Option(7860, "--port", "-p", help="监听端口"),
+) -> None:
+    """启动 Gradio Web UI。"""
+    from .web import create_ui
+
+    ui = create_ui()
+    console.print(f"[bold]🌐 启动 Web UI [link=http://127.0.0.1:{port}]http://127.0.0.1:{port}[/link][/bold]")
+    ui.launch(
+        server_port=port,
+        share=share,
+        inbrowser=True,
+        css=(
+            ".yaml-preview textarea {"
+            "  font-family: 'Cascadia Code', 'Consolas', monospace !important;"
+            "  font-size: 13px;"
+            "}"
+        ),
+        theme="soft",
+    )
+
+
 def _filter_chapters(all_chapters, spec: str):
     if not spec:
         return all_chapters
