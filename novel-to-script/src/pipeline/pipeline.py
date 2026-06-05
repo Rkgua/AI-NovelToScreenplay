@@ -10,10 +10,9 @@ from ..parser.chapter import Chapter
 from ..schema.screenplay import Screenplay
 from ..schema.validator import save_screenplay
 from .assembler import assemble_screenplay
+from .chapter_processor import process_chapter
 from .character import extract_characters
-from .scene import detect_scenes
 from .summary import summarize_chapter
-from .dialogue import extract_beats
 
 
 ProgressCallback = Callable[[str, int, int], None]
@@ -64,25 +63,12 @@ def run_pipeline(
         summary = summarize_chapter(adapter, chapter, characters_raw, prev_summary)
         summaries.append(summary)
 
-        # 3. 分场
-        scenes_raw = detect_scenes(adapter, chapter, characters_raw, prev_summary)
-
-        # 4. 逐场提取节拍
-        chapter_text = chapter.full_text
-        for sc in scenes_raw:
-            _report(progress, f"  └ 提取场次节拍: {sc.get('summary', '')[:30]}...", i + 1, total_chapters)
-            scene_text_prompt = (
-                f"请为以下场次提取节拍：\n\n"
-                f"场次信息：{sc.get('location_type', 'INT')} - {sc.get('location', '')} - {sc.get('time', '')}\n"
-                f"场次概要：{sc.get('summary', '')}\n\n"
-                f"章节原文供参考：\n{chapter_text}"
-            )
-            beats = extract_beats(adapter, scene_text_prompt, characters_raw)
-            sc["beats"] = beats
+        # 3+4 合并: 分场 + 节拍提取（一次调用，避免重复）
+        scenes_with_beats = process_chapter(adapter, chapter, characters_raw, prev_summary)
 
         chapters_data.append({
             "chapter_title": chapter.title,
-            "scenes": scenes_raw,
+            "scenes": scenes_with_beats,
         })
 
         _report(progress, f"完成章节 {i + 1}/{total_chapters}", i + 1, total_chapters)
