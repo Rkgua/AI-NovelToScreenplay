@@ -6,14 +6,13 @@ from pathlib import Path
 
 import typer
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .config import AppConfig
 from .parser import parse_file
 from .pipeline import run_and_save
 
 app = typer.Typer(name="novel2script", help="AI 辅助小说转剧本工具")
-console = Console()
+console = Console(force_terminal=False, legacy_windows=False)
 
 
 @app.command()
@@ -31,36 +30,31 @@ def convert(
         console.print(f"[red]文件不存在: {source}[/red]")
         raise typer.Exit(1)
 
-    console.print(f"[bold]📖 源文件:[/bold] {source}")
-    console.print(f"[bold]🤖 模型:[/bold] {model}")
+    console.print(f"[bold]Source:[/bold] {source}")
+    console.print(f"[bold]Model:[/bold] {model}")
 
-    # 解析
-    with console.status("[bold green]正在解析文件...[/bold green]"):
+    with console.status("[bold green]Parsing file...[/bold green]"):
         all_chapters = parse_file(source_path)
 
     if not all_chapters:
-        console.print("[red]未检测到任何章节[/red]")
+        console.print("[red]No chapters detected[/red]")
         raise typer.Exit(1)
 
-    console.print(f"[bold]📑 检测到 {len(all_chapters)} 个章节[/bold]")
+    console.print(f"[bold]Chapters: {len(all_chapters)}[/bold]")
 
-    # 章节筛选
     selected = _filter_chapters(all_chapters, chapters)
     if len(selected) < 3:
-        console.print(f"[yellow]⚠ 仅 {len(selected)} 个章节，建议至少 3 章以获得较完整的结果[/yellow]")
+        console.print(f"[yellow]Warning: only {len(selected)} chapters, suggest at least 3[/yellow]")
 
-    # 配置
     config = AppConfig.from_env(model)
 
-    # 元信息
     meta = {
         "title": title or source_path.stem,
         "source": source_path.name,
         "author": author,
     }
 
-    # 转换
-    console.print("[bold]🚀 开始 AI 转换...[/bold]")
+    console.print("[bold]Starting AI conversion...[/bold]")
 
     def progress_cb(phase: str, cur: int, total: int) -> None:
         console.print(f"  {phase}")
@@ -72,7 +66,7 @@ def convert(
             progress=progress_cb,
         )
     except Exception as e:
-        console.print(f"[red]转换失败: {e}[/red]")
+        console.print(f"[red]Conversion failed: {e}[/red]")
         raise typer.Exit(1)
 
     total_scenes = sum(len(a.scenes) for a in screenplay.structure.acts)
@@ -84,11 +78,11 @@ def convert(
     )
 
     console.print()
-    console.print("[bold green]✅ 转换完成![/bold green]")
-    console.print(f"[bold]📄 输出:[/bold] {output}")
-    console.print(f"[bold]📊 统计:[/bold] {len(screenplay.characters)} 个角色, "
-                   f"{len(screenplay.structure.acts)} 幕, {total_scenes} 场, "
-                   f"{total_beats} 个节拍 ({dialogue_count} 句对白)")
+    console.print("[bold green]Done![/bold green]")
+    console.print(f"[bold]Output:[/bold] {output}")
+    console.print(f"[bold]Stats:[/bold] {len(screenplay.characters)} chars, "
+                   f"{len(screenplay.structure.acts)} acts, {total_scenes} scenes, "
+                   f"{total_beats} beats ({dialogue_count} dialogues)")
 
 
 @app.command()
@@ -101,15 +95,15 @@ def validate(
     result = validate_screenplay(screenplay)
 
     if result.valid:
-        console.print("[bold green]✅ 校验通过[/bold green]")
+        console.print("[bold green]PASS[/bold green]")
     else:
-        console.print("[bold red]❌ 校验失败[/bold red]")
+        console.print("[bold red]FAIL[/bold red]")
         for err in result.errors:
-            console.print(f"  [red]✗ {err}[/red]")
+            console.print(f"  [red]- {err}[/red]")
 
     if result.warnings:
         for w in result.warnings:
-            console.print(f"  [yellow]⚠ {w}[/yellow]")
+            console.print(f"  [yellow]* {w}[/yellow]")
 
 
 @app.command()
@@ -121,7 +115,7 @@ def launch(
     from .web import create_ui
 
     ui = create_ui()
-    console.print(f"[bold]🌐 启动 Web UI [link=http://127.0.0.1:{port}]http://127.0.0.1:{port}[/link][/bold]")
+    console.print(f"[bold]Web UI starting at: http://127.0.0.1:{port}[/bold]")
     ui.launch(
         server_port=port,
         share=share,

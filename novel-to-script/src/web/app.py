@@ -109,8 +109,6 @@ def _run_conversion(
     progress=gr.Progress(),
 ):
     """执行转换流水线并返回 UI 更新。"""
-    _empty = ("", "", "", gr.DownloadButton(visible=False))
-
     if file_obj is None:
         gr.Warning("请先上传小说文件")
         return ("❌ 请先上传小说文件", "", "", gr.DownloadButton(visible=False))
