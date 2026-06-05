@@ -1,0 +1,1 @@
+"""剧本 Schema 定义 — Pydantic 数据模型与 YAML 校验。"""
