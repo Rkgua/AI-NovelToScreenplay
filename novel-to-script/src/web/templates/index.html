@@ -1093,6 +1093,8 @@
       function showBeatTip(e, idx) {
         const b = (_tlData && _tlData.beats) ? _tlData.beats[idx] : null;
         if (!b) return;
+        let text = b.parenthetical || "";
+        if (!text) return;
         let tip = document.getElementById("beat-tip");
         if (!tip) {
           tip = document.createElement("div");
@@ -1100,15 +1102,6 @@
           tip.className = "tl-tooltip";
           document.body.appendChild(tip);
         }
-        let text =
-          b.type === "action"
-            ? b.description
-            : b.type === "dialogue"
-              ? b.character +
-                ": " +
-                b.line +
-                (b.parenthetical ? " (" + b.parenthetical + ")" : "")
-              : b.transition;
         tip.textContent = text;
         tip.style.display = "block";
         tip.style.left = Math.min(e.pageX + 12, window.innerWidth - 280) + "px";
