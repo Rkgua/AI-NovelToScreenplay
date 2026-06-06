@@ -111,22 +111,11 @@ def launch(
     share: bool = typer.Option(False, "--share", help="生成公开分享链接"),
     port: int = typer.Option(7860, "--port", "-p", help="监听端口"),
 ) -> None:
-    """启动 Gradio Web UI。"""
-    import os as _os
-    for _key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
-        _os.environ.pop(_key, None)
-    _os.environ["no_proxy"] = "127.0.0.1,localhost"
+    """启动 Web UI。"""
+    from .web import start_server
 
-    from .web import create_ui
-
-    ui = create_ui()
     console.print(f"[bold]Web UI starting at: http://127.0.0.1:{port}[/bold]")
-    ui.launch(
-        server_name="127.0.0.1",
-        server_port=port,
-        share=share,
-        inbrowser=False,
-    )
+    start_server(port=port)
 
 
 def _filter_chapters(all_chapters, spec: str):

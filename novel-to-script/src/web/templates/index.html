@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Novel2Script - AI 小说转剧本</title>
+    <style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+
+      body {
+        font-family: -apple-system,"Microsoft YaHei","PingFang SC",sans-serif;
+        background: #f5f6f8; color: #222; min-height:100vh; line-height:1.6;
+      }
+
+      /* header */
+      .header {
+        background:#fff; padding:16px 28px; border-bottom:1px solid #e8e8ec;
+        display:flex; align-items:baseline; gap:16px;
+      }
+      .header h1 { font-size:20px; font-weight:700; color:#111; }
+      .header p { font-size:12px; color:#999; }
+
+      /* layout */
+      .wrapper { display:flex; flex-direction:column; gap:12px; padding:12px; height:calc(100vh - 62px); }
+      .wrapper > .row { flex:1 1 0; display:flex; gap:12px; min-height:0; }
+      .wrapper > .row > * { flex:1 1 0; min-width:0; }
+
+      /* panels */
+      .panel { display:flex; flex-direction:column; background:#fff; border:1px solid #e8e8ec; }
+      .phead {
+        flex-shrink:0; padding:10px 16px; background:#f9fafb; border-bottom:1px solid #e8e8ec;
+        font-size:13px; font-weight:600; color:#444;
+      }
+      .pbody { flex:1 1 0; overflow-y:auto; padding:14px; min-height:0; }
+
+      /* forms */
+      .fg { margin-bottom:10px; }
+      .fg label { display:block; font-size:11px; color:#888; margin-bottom:3px; font-weight:500; }
+      .fg input,.fg select {
+        width:100%; padding:8px 10px; border:1px solid #dcdee2; font-size:12px;
+        background:#fafbfc; color:#222; outline:none;
+      }
+      .fg input:focus,.fg select:focus { border-color:#444; background:#fff; }
+
+      /* buttons */
+      .btn {
+        display:inline-flex; align-items:center; gap:4px; padding:7px 16px; border:1px solid #dcdee2;
+        font-size:12px; cursor:pointer; font-weight:500; background:#fff; color:#444; transition:.15s;
+      }
+      .btn:hover { border-color:#222; color:#111; }
+      .btn-primary { background:#111; color:#fff; border-color:#111; }
+      .btn-primary:hover { background:#333; }
+      .btn-sm { padding:4px 10px; font-size:11px; }
+
+      /* status */
+      .status { padding:8px 12px; font-size:12px; margin-bottom:8px; }
+      .status-ok { background:#f0f8f0; color:#2e7d32; border-left:2px solid #2e7d32; }
+      .status-err { background:#fef5f5; color:#c62828; border-left:2px solid #c62828; }
+      .stats { display:flex; gap:16px; font-size:12px; color:#666; margin-bottom:8px; padding:8px 12px; background:#f9fafb; }
+      .stats span { color:#111; font-weight:600; }
+
+      /* progress */
+      .progress-wrap { margin:0 0 12px; display:none; }
+      .progress-wrap.show { display:block; }
+      .progress-bar { height:3px; background:#e8e8ec; overflow:hidden; }
+      .progress-bar .fill { height:100%; width:0; background:#111; animation:prog 2.5s ease infinite; }
+      @keyframes prog { 0%{width:0} 30%{width:35%} 60%{width:70%} 100%{width:92%} }
+      .progress-text { font-size:11px; color:#888; margin-top:4px; }
+
+      /* error sidebar */
+      #error-sidebar { font:11px "SF Mono","Consolas",monospace; color:#bbb; overflow-y:auto; }
+      #error-sidebar .ln { display:flex; align-items:baseline; line-height:1.55; padding:0 4px; }
+      #error-sidebar .ln.hl { background:#fff5f5; color:#c62828; }
+      #error-sidebar .ln .num { width:30px; text-align:right; flex-shrink:0; margin-right:8px; font-weight:500; }
+      #error-sidebar .ln.hl .num::before { content:"▶"; margin-right:2px; }
+      #error-sidebar .ln.hl .num { font-weight:700; }
+      #error-sidebar .ln .text { white-space:pre; overflow:hidden; text-overflow:ellipsis; color:#bbb; }
+      #error-sidebar .ln.hl .text { color:#666; }
+      #error-sidebar .ln .err-msg {
+        margin-left:auto; color:#c62828; font-size:10px; white-space:nowrap;
+        overflow:hidden; text-overflow:ellipsis; max-width:130px; flex-shrink:0;
+      }
+
+      /* error view panel */
+      .error-view { border:1px solid #f5c6cb; margin-bottom:8px; display:none; }
+      .error-view.show { display:block; }
+      .error-header { background:#fff5f5; color:#c62828; padding:6px 12px; font-size:12px; font-weight:600; border-bottom:1px solid #f5c6cb; }
+      .error-body { max-height:200px; overflow-y:auto; background:#fff; font:11px "SF Mono","Consolas",monospace; }
+      .error-line { padding:0 8px; line-height:1.6; white-space:pre; color:#aaa; }
+      .error-line.hl { background:#fff5f5; }
+      .error-line .ln { display:inline-block; width:36px; text-align:right; color:#ddd; }
+      .error-line.hl .ln { color:#c62828; font-weight:600; }
+      .error-msg { padding:0 8px 0 46px; font-size:10px; color:#c62828; background:#fff5f5; }
+
+      /* YAML area */
+      .yaml-area { display:flex; flex-direction:column; }
+      .yaml-nav {
+        flex-shrink:0; display:flex; gap:4px; padding:0 0 8px; justify-content:flex-end;
+        position:sticky; top:0; background:#fff; z-index:10;
+      }
+      #yaml-editor {
+        width:100%; flex:1 1 auto; background:#fafbfc; color:#222;
+        border:1px solid #dcdee2; padding:12px; font:12px "SF Mono","Consolas",monospace;
+        resize:none; line-height:1.55; tab-size:2; overflow-y:auto; min-height:0; outline:none;
+      }
+      #yaml-editor:focus { border-color:#444; background:#fff; }
+
+      /* misc */
+      .spinner { display:none; width:12px; height:12px; border:2px solid #e8e8ec; border-top-color:#888; border-radius:50%; animation:s .6s linear infinite; }
+      .spinner.show { display:inline-block; }
+      @keyframes s { to { transform:rotate(360deg); } }
+
+      .toast { position:fixed; top:20px; right:20px; padding:10px 20px; font-size:12px; z-index:9999; display:none; background:#111; color:#fff; }
+      .toast.show { display:block; }
+      .toast-error { background:#c62828; }
+
+      ::-webkit-scrollbar { width:5px; }
+      ::-webkit-scrollbar-thumb { background:#ddd; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Novel2Script</h1>
+      <p>将 3 章以上的小说文本自动转换为结构化 YAML 剧本</p>
+    </div>
+
+    <div class="wrapper">
+      <!-- ====== 上半部分 ====== -->
+      <div class="row">
+        <!-- 1. 输入 -->
+        <div class="panel1">
+          <div class="phead">输入</div>
+          <div class="pbody">
+            <div class="fg">
+              <label>上传小说文件 (.txt / .md / .epub)</label>
+              <input type="file" id="file-input" accept=".txt,.md,.epub" />
+            </div>
+            <div class="fg">
+              <label>LLM 服务商</label>
+              <select id="model-select">
+                <option value="deepseek">DeepSeek</option>
+                <option value="openai">OpenAI</option>
+                <option value="claude">Claude</option>
+                <option value="ollama">Ollama</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>剧本标题</label>
+              <input
+                type="text"
+                id="title-input"
+                placeholder="默认取自文件名"
+              />
+            </div>
+            <div class="fg">
+              <label>原作者</label>
+              <input type="text" id="author-input" placeholder="选填" />
+            </div>
+            <button
+              class="btn btn-primary"
+              style="width: 100%; padding: 10px"
+              onclick="doConvert()"
+            >
+              <span class="spinner" id="spinner-convert"></span>开始转换
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. 输出信息（不含YAML） -->
+        <div class="panel" id="output-info">
+          <div class="phead">输出信息</div>
+          <div class="pbody">
+            <div class="progress-wrap" id="progress-wrap">
+              <div class="progress-bar"><div class="fill"></div></div>
+              <div class="progress-text" id="progress-text">准备中...</div>
+            </div>
+            <div
+              class="status status-ok"
+              id="status-box"
+              style="display: none"
+            ></div>
+            <div class="stats" id="stats-box" style="display: none"></div>
+            <div class="error-view" id="error-view">
+              <div class="error-header" id="error-header"></div>
+              <div class="error-body" id="error-body"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== 下半部分 ====== -->
+      <div class="row">
+        <!-- 3. 错误提示栏 -->
+        <div class="panel">
+          <div class="phead">错误提示</div>
+          <div class="pbody" id="error-sidebar">
+            <div class="hint">索引栏：暂无错误</div>
+            <div class="hint">校验通过</div>
+          </div>
+        </div>
+
+        <!-- 4. YAML 预览 + 按钮 -->
+        <div class="panel">
+          <div class="phead">YAML 剧本预览</div>
+          <div class="pbody yaml-area">
+            <!-- 浮动按钮 -->
+            <div class="yaml-nav">
+              <button class="btn btn-secondary btn-sm" onclick="doValidate()">
+                <span class="spinner" id="spinner-validate"></span>校验
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="doSave()">
+                <span class="spinner" id="spinner-save"></span>保存并导出
+              </button>
+              <button
+                class="btn btn-secondary btn-sm"
+                id="btn-download"
+                style="display: none"
+                onclick="doDownload()"
+              >
+                下载
+              </button>
+            </div>
+            <textarea
+              id="yaml-editor"
+              placeholder="转换结果将显示在此..."
+              spellcheck="false"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+      let savedPath = "";
+
+      function showToast(msg, type) {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.className =
+          "toast show " + (type === "error" ? "toast-error" : "toast-info");
+        setTimeout(() => t.classList.remove("show"), 4000);
+      }
+      function sp(id, v) {
+        document.getElementById(id).classList[v ? "add" : "remove"]("show");
+      }
+
+      async function doConvert() {
+        const fi = document.getElementById("file-input");
+        if (!fi.files.length) {
+          showToast("请先选择文件", "error");
+          return;
+        }
+        sp("spinner-convert", true);
+
+        // show progress
+        const pw = document.getElementById("progress-wrap");
+        const pt = document.getElementById("progress-text");
+        pw.classList.add("show");
+        pt.textContent = "正在上传文件...";
+
+        const fd = new FormData();
+        fd.append("file", fi.files[0]);
+        fd.append("model", document.getElementById("model-select").value);
+        fd.append("title", document.getElementById("title-input").value);
+        fd.append("author", document.getElementById("author-input").value);
+        try {
+          pt.textContent = "正在处理中...";
+          const r = await fetch("/api/convert", { method: "POST", body: fd });
+          pt.textContent = "正在生成结果...";
+          const d = await r.json();
+          if (!d.ok) {
+            pw.classList.remove("show");
+            showToast(d.error || "转换失败", "error");
+            return;
+          }
+          pt.textContent = "转换完成！";
+          setTimeout(function () {
+            pw.classList.remove("show");
+          }, 800);
+          document.getElementById("yaml-editor").value = d.yaml;
+          document.getElementById("stats-box").style.display = "block";
+          document.getElementById("stats-box").innerHTML =
+            "角色:<span>" +
+            d.stats.characters +
+            "</span> | 幕:<span>" +
+            d.stats.acts +
+            "</span> | 场:<span>" +
+            d.stats.scenes +
+            "</span> | 节拍:<span>" +
+            d.stats.beats +
+            "</span> | 对白:<span>" +
+            d.stats.dialogues +
+            "</span>";
+          document.getElementById("status-box").style.display = "block";
+          document.getElementById("status-box").className = "status status-ok";
+          document.getElementById("status-box").textContent = "转换完成";
+          document.getElementById("btn-download").style.display =
+            "inline-block";
+          savedPath = d.output_path;
+          document.getElementById("error-view").classList.remove("show");
+          updateSidebar(0, []);
+          showToast("转换完成", "info");
+        } catch (e) {
+          pw.classList.remove("show");
+          showToast("请求失败: " + e.message, "error");
+        } finally {
+          sp("spinner-convert", false);
+        }
+      }
+
+      function updateSidebar(count, items) {
+        const y = document.getElementById("yaml-editor").value;
+        const lines = y.split("\n");
+        const errMap = {};
+        for (const it of items) {
+          if (!errMap[it.ln]) errMap[it.ln] = [];
+          errMap[it.ln].push(it.msg);
+        }
+        const sb = document.getElementById("error-sidebar");
+        let h = "";
+        for (let i = 1; i <= lines.length; i++) {
+          const es = errMap[i] || [];
+          const cls = es.length ? "ln hl" : "ln";
+          const num = es.length ? "\u25b6" + i : i;
+          const emsg = es.length ? " — " + es[0].substring(0, 60) : "";
+          h +=
+            '<div class="' +
+            cls +
+            '"><span class="num">' +
+            num +
+            "</span>" +
+            escapeHtml(lines[i - 1].substring(0, 80) || " ") +
+            '<span class="err">' +
+            emsg +
+            "</span></div>";
+        }
+        sb.innerHTML = h;
+
+        // sync scroll with yaml editor
+        const editor = document.getElementById("yaml-editor");
+        sb.scrollTop = editor.scrollTop;
+      }
+
+      // scroll sync
+      (function () {
+        const editor = document.getElementById("yaml-editor");
+        const sb = document.getElementById("error-sidebar");
+        let syncing = false;
+        editor.addEventListener("scroll", function () {
+          if (syncing) return;
+          syncing = true;
+          sb.scrollTop = editor.scrollTop;
+          setTimeout(function () {
+            syncing = false;
+          }, 50);
+        });
+        sb.addEventListener("scroll", function () {
+          if (syncing) return;
+          syncing = true;
+          editor.scrollTop = sb.scrollTop;
+          setTimeout(function () {
+            syncing = false;
+          }, 50);
+        });
+      })();
+
+      async function doValidate() {
+        const y = document.getElementById("yaml-editor").value;
+        if (!y.trim()) {
+          showToast("YAML 为空", "error");
+          return;
+        }
+        sp("spinner-validate", true);
+        try {
+          const r = await fetch("/api/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ yaml: y }),
+          });
+          const d = await r.json();
+          if (d.valid) {
+            document.getElementById("error-view").classList.remove("show");
+            document.getElementById("status-box").style.display = "block";
+            document.getElementById("status-box").className =
+              "status status-ok";
+            document.getElementById("status-box").textContent = "校验通过";
+            updateSidebar(0, []);
+            showToast("校验通过", "info");
+          } else {
+            renderErrors(y, d.errors);
+            document.getElementById("status-box").style.display = "block";
+            document.getElementById("status-box").className =
+              "status status-err";
+            document.getElementById("status-box").textContent =
+              d.errors.length + " 处错误";
+          }
+        } catch (e) {
+          showToast("校验失败: " + e.message, "error");
+        } finally {
+          sp("spinner-validate", false);
+        }
+      }
+
+      function renderErrors(yaml, errors) {
+        const lines = yaml.split("\n");
+        const errMap = {};
+        errors.forEach((e) => {
+          const ln = findLine(lines, e);
+          if (!errMap[ln]) errMap[ln] = [];
+          errMap[ln].push(e);
+        });
+        document.getElementById("error-header").textContent =
+          errors.length + " 处错误";
+        const body = document.getElementById("error-body");
+        let h = "";
+        for (let i = 1; i <= lines.length; i++) {
+          const es = errMap[i] || [];
+          h +=
+            '<div class="error-line' +
+            (es.length ? " hl" : "") +
+            '"><span class="ln">' +
+            (es.length ? "\u25b6" + i : i) +
+            "</span> " +
+            escapeHtml(lines[i - 1]) +
+            "</div>";
+          for (const m of es)
+            h += '<div class="error-msg">' + escapeHtml(m) + "</div>";
+        }
+        body.innerHTML = h;
+        document.getElementById("error-view").classList.add("show");
+
+        // update sidebar
+        const items = [];
+        for (const [ln, msgs] of Object.entries(errMap)) {
+          for (const msg of msgs) items.push({ ln: parseInt(ln), msg: msg });
+        }
+        items.sort((a, b) => a.ln - b.ln);
+        updateSidebar(errors.length, items);
+      }
+
+      function findLine(lines, err) {
+        let m = err.match(
+          /角色\s*\'(.+?)\'\s*的关系引用了不存在的角色\s*\'(.+?)\'/,
+        );
+        if (m) {
+          const t = m[2];
+          for (let i = 0; i < lines.length; i++)
+            if (lines[i].includes(t)) return i + 1;
+          return 1;
+        }
+        m = err.match(/第(\d+)幕第(\d+)场的对白引用了不存在的角色\s*\'(.+?)\'/);
+        if (m) {
+          const sn = parseInt(m[2]),
+            tgt = m[3];
+          return findInScene(lines, sn, tgt) || 1;
+        }
+        m = err.match(/第(\d+)幕第(\d+)场引用了不存在的角色\s*\'(.+?)\'/);
+        if (m) {
+          const sn = parseInt(m[2]),
+            tgt = m[3];
+          return findInScene(lines, sn, tgt) || 1;
+        }
+        if (err.includes("重复") || err.includes("递增")) {
+          for (let i = 0; i < lines.length; i++)
+            if (lines[i].includes("scene_number:")) return i + 1;
+          return 1;
+        }
+        return 1;
+      }
+
+      function findInScene(lines, sn, tgt) {
+        let inS = false;
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].match(new RegExp("scene_number:\\s*" + sn + "\\b")))
+            inS = true;
+          else if (inS && lines[i].match(/scene_number:/)) return null;
+          if (inS && lines[i].includes(tgt)) return i + 1;
+        }
+        return null;
+      }
+
+      function escapeHtml(s) {
+        return s
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      async function doSave() {
+        const y = document.getElementById("yaml-editor").value;
+        if (!y.trim()) {
+          showToast("YAML 为空", "error");
+          return;
+        }
+        sp("spinner-save", true);
+        try {
+          const vr = await fetch("/api/validate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ yaml: y }),
+          });
+          const vd = await vr.json();
+          if (!vd.valid) {
+            renderErrors(y, vd.errors);
+            document.getElementById("status-box").style.display = "block";
+            document.getElementById("status-box").className =
+              "status status-err";
+            document.getElementById("status-box").textContent =
+              "校验未通过，请修复后再保存";
+            showToast("校验未通过", "error");
+            return;
+          }
+          const fn = savedPath
+            ? (
+                savedPath.replace(/\\/g, "/").split("/").pop() || "screenplay"
+              ).replace(/\.yaml$/, "_edited")
+            : "screenplay_edited";
+          const sr = await fetch("/api/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ yaml: y, filename: fn }),
+          });
+          const sd = await sr.json();
+          if (!sd.ok) {
+            showToast(sd.error || "保存失败", "error");
+            return;
+          }
+          savedPath = sd.path;
+          document.getElementById("btn-download").style.display =
+            "inline-block";
+          document.getElementById("status-box").style.display = "block";
+          document.getElementById("status-box").className = "status status-ok";
+          document.getElementById("status-box").textContent =
+            "已保存: " + sd.filename;
+          showToast("保存成功", "info");
+        } catch (e) {
+          showToast("保存失败: " + e.message, "error");
+        } finally {
+          sp("spinner-save", false);
+        }
+      }
+
+      function doDownload() {
+        if (!savedPath) return;
+        const fn = savedPath.replace(/\\/g, "/").split("/").pop();
+        window.open("/api/download/" + encodeURIComponent(fn), "_blank");
+      }
+
+      // YAML editor resize
+      (function () {
+        const editor = document.getElementById("yaml-editor");
+        editor.addEventListener("input", function () {
+          this.style.height = "auto";
+          this.style.height = this.scrollHeight + "px";
+        });
+      })();
+    </script>
+  </body>
+</html>
