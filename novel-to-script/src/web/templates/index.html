@@ -327,15 +327,12 @@
         padding: 4px 0;
       }
       .tl-scene h4 {
-        font-size: 10px;
-        color: #999;
-        font-weight: 500;
-        text-transform: uppercase;
-        padding: 4px 8px;
-        margin: 0;
-        border-bottom: 1px solid #f0f0f0;
-        letter-spacing: 0.5px;
+        font-size:10px; color:#999; font-weight:500; padding:4px 8px; margin:0;
+        border-bottom:1px solid #f0f0f0; cursor:pointer; transition:.1s;
       }
+      .tl-scene h4:hover { background:#f5f7fa; color:#555; }
+      .tl-scene-hover { font-size:10px; color:#666; padding:2px 8px; display:none; background:#f9fafb; }
+      .tl-scene-hover.show { display:block; }
       .tl-beat {
         display: flex;
         align-items: flex-start;
@@ -762,7 +759,12 @@
           if (b.sceneIdx !== sceneIdx) {
             sceneIdx = b.sceneIdx;
             if (sceneIdx > 0) html += '</div>';
-            html += '<div class="tl-scene"><h4>' + escapeHtml(b.sceneTitle || '场景 ' + (sceneIdx + 1)) + '</h4>';
+            html += '<div class="tl-scene"><h4 onclick="var d=this.nextElementSibling;if(d)d.classList.toggle(\'show\')">' + escapeHtml(b.sceneTitle || '场景 ' + (sceneIdx + 1)) + '</h4>';
+            var hp = [];
+            if (b.sceneLocType) hp.push(b.sceneLocType);
+            if (b.sceneLoc) hp.push(b.sceneLoc);
+            if (b.sceneTime) hp.push(b.sceneTime);
+            if (hp.length) html += '<div class="tl-scene-hover">' + escapeHtml(hp.join(" · ")) + '</div>';
           }
           const icon = {action:"A",dialogue:"D",transition:"T"}[b.type] || "?";
           const body = b.type === "dialogue"
@@ -789,7 +791,8 @@
         const characters = [];
         const beats = [];
         let inMeta = false, inChars = false, inStruct = false;
-        let sceneIdx = -1, sceneTitle = "", beat = null;
+        let sceneIdx = -1, sceneTitle = "", sceneLocType = "", sceneLoc = "", sceneTime = "", beat = null;
+        let sceneInfos = []; // {type, location, time}
 
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
@@ -857,16 +860,25 @@
 
           // scene detection
           const sm = line.match(/^(?:\s*-)?\s*scene_number:\s*(\d+)/);
-          if (sm) { sceneIdx = parseInt(sm[1]) - 1; sceneTitle = "Scene " + sm[1]; }
+          if (sm) {
+            sceneIdx = parseInt(sm[1]) - 1;
+            sceneTitle = "Scene " + sm[1];
+            sceneLocType = ""; sceneLoc = ""; sceneTime = "";
+            if (!sceneInfos[sceneIdx]) sceneInfos[sceneIdx] = {};
+          }
+          const htype = line.match(/^\s+location_type:\s*(.+)/);
+          if (htype && sceneIdx >= 0) { sceneInfos[sceneIdx].type = htype[1].trim(); }
+          const hloc = line.match(/^\s+location:\s*(.+)/);
+          if (hloc && sceneIdx >= 0) { sceneInfos[sceneIdx].location = hloc[1].trim(); sceneTitle = hloc[1].trim() + " - Scene " + (sceneIdx + 1); }
+          const htime = line.match(/^\s+time:\s*(.+)/);
+          if (htime && sceneIdx >= 0) { sceneInfos[sceneIdx].time = htime[1].trim(); }
           const ssm = line.match(/^\s+summary:\s*(.+)/);
           if (ssm && sceneIdx >= 0) sceneTitle = ssm[1].trim();
-          const hlm = line.match(/^\s+location:\s*(.+)/);
-          if (hlm && sceneIdx >= 0) sceneTitle = hlm[1].trim() + " - Scene " + (sceneIdx + 1);
 
           // beat detection
           if (line.match(/^\s+- type:\s*(action|dialogue|transition)/)) {
             if (beat) beats.push(beat);
-            beat = {type:line.match(/type:\s*(action|dialogue|transition)/)[1], idx:beats.length, sceneIdx, sceneTitle, yamlLine:i+1, description:"", character:"", line:"", transition:"", parenthetical:""};
+            beat = {type:line.match(/type:\s*(action|dialogue|transition)/)[1], idx:beats.length, sceneIdx, sceneTitle, sceneLocType:sceneInfos[sceneIdx]&&sceneInfos[sceneIdx].type||"", sceneLoc:sceneInfos[sceneIdx]&&sceneInfos[sceneIdx].location||"", sceneTime:sceneInfos[sceneIdx]&&sceneInfos[sceneIdx].time||"", yamlLine:i+1, description:"", character:"", line:"", transition:"", parenthetical:""};
             continue;
           }
           if (beat && line.match(/^\s+description:\s*(.+)/)) { beat.description = line.match(/description:\s*(.+)/)[1].trim().replace(/^["']|["']$/g,""); }
