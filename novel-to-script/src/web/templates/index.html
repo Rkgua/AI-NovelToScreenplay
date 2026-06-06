@@ -641,7 +641,7 @@
       /* settings modal */
       .settings-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.3); z-index:9999; justify-content:center; align-items:center; }
       .settings-overlay.show { display:flex; }
-      .settings-modal { background:#fff; border-radius:8px; width:620px; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 8px 30px rgba(0,0,0,.15); }
+      .settings-modal { background:#fff; border-radius:8px; width:740px; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 8px 30px rgba(0,0,0,.15); }
       .settings-head { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #e8e8ec; font-weight:600; font-size:14px; }
       .settings-body { flex:1; overflow-y:auto; padding:12px 16px; }
       .settings-group { display:inline-block; vertical-align:top; width:calc(50% - 6px); margin:0 3px 8px; }
@@ -655,6 +655,9 @@
       .settings-tip:hover { background:#ccc; color:#444; }
       .settings-tip .settings-tip-text { display:none; position:absolute; bottom:140%; left:50%; transform:translateX(-50%); background:#111; color:#fff; padding:2px 6px; border-radius:3px; font-size:10px; white-space:nowrap; z-index:10; pointer-events:none; }
       .settings-tip:hover .settings-tip-text { display:block; }
+      .settings-key { font:10px "SF Mono","Consolas",monospace; color:#888; min-width:120px; }
+      .settings-label-text { color:#444; min-width:40px; }
+      .settings-type { font-size:9px; color:#aaa; margin-left:auto; }
       .lock { font-size:9px; margin-left:2px; color:#bbb; }
     </style>
   </head>
@@ -1852,44 +1855,49 @@
       // ── 显示设置 ──
       var SETTINGS_DEFS = {
         meta: [
-          {key:"title",label:"标题",desc:"剧本标题(强制保留)",required:true},
-          {key:"source",label:"来源",desc:"原小说名称"},
-          {key:"author",label:"作者",desc:"原作者姓名"},
-          {key:"adapted_by",label:"改编者",desc:"改编者或编剧"},
-          {key:"format",label:"格式",desc:"剧本格式(feature/episode/stage等)"},
-          {key:"version",label:"版本",desc:"语义化版本号"},
-          {key:"created_at",label:"创建时间",desc:"剧本创建时间戳"},
-          {key:"notes",label:"备注",desc:"元信息备注"}
+          {key:"title",label:"剧本标题",desc:"剧本标题(强制保留)",required:true,type:"string"},
+          {key:"source",label:"来源",desc:"原小说名称",type:"string"},
+          {key:"author",label:"作者",desc:"原作者姓名",type:"string"},
+          {key:"adapted_by",label:"改编者",desc:"改编者或编剧",type:"string"},
+          {key:"genre",label:"类型标签",desc:"动作/科幻/剧情等(强制保留)",required:true,type:"list[enum]"},
+          {key:"format",label:"格式",desc:"feature/episode/short/stage",type:"enum"},
+          {key:"version",label:"版本",desc:"语义化版本号",type:"string"},
+          {key:"created_at",label:"创建时间",desc:"剧本创建时间戳",type:"datetime"},
+          {key:"notes",label:"备注",desc:"元信息备注",type:"string"}
         ],
         character: [
-          {key:"id",label:"ID",desc:"角色唯一标识(强制保留)",required:true},
-          {key:"name",label:"姓名",desc:"角色名称(强制保留)",required:true},
-          {key:"role",label:"定位",desc:"主角/反派/配角/次要角色/客串"},
-          {key:"gender",label:"性别",desc:"角色性别(男/女/无)"},
-          {key:"age",label:"年龄",desc:"年龄描述(青年/中年等)"},
-          {key:"archetype",label:"原型",desc:"角色原型(英雄/导师/阴影等)"},
-          {key:"traits",label:"特征",desc:"性格特征关键词列表"},
-          {key:"aliases",label:"别名",desc:"别名和绰号列表"},
-          {key:"description",label:"描述",desc:"角色摘要描述"},
-          {key:"relationships",label:"关系",desc:"角色关系(和其他角色的关联)"},
-          {key:"notes",label:"备注",desc:"角色备注"}
+          {key:"id",label:"ID",desc:"角色唯一标识(强制保留)",required:true,type:"string"},
+          {key:"name",label:"姓名",desc:"角色名称(强制保留)",required:true,type:"string"},
+          {key:"role",label:"定位",desc:"protagonist/antagonist/supporting/minor/cameo",type:"enum"},
+          {key:"gender",label:"性别",desc:"角色性别(男/女/无)",type:"string"},
+          {key:"age",label:"年龄",desc:"年龄描述(青年/中年等)",type:"string"},
+          {key:"archetype",label:"原型",desc:"角色原型(英雄/导师/阴影等)",type:"string"},
+          {key:"traits",label:"特征",desc:"性格特征关键词列表",type:"list"},
+          {key:"aliases",label:"别名",desc:"别名和绰号列表",type:"list"},
+          {key:"description",label:"描述",desc:"角色摘要描述",type:"string"},
+          {key:"relationships",label:"关系",desc:"角色关系(和其他角色的关联)",type:"list[object]"},
+          {key:"notes",label:"备注",desc:"角色备注",type:"string"}
         ],
         scene: [
-          {key:"heading",label:"场次标题",desc:"slug line(强制保留)",required:true},
-          {key:"summary",label:"概要",desc:"本场内容概要"},
-          {key:"characters_in_scene",label:"出场角色",desc:"本场出场角色ID列表"},
-          {key:"notes",label:"备注",desc:"场次备注"}
+          {key:"scene_number",label:"场次编号",desc:"全局递增编号(强制保留)",required:true,type:"int"},
+          {key:"location_type",label:"地点类型",desc:"INT/EXT/INT. EXT(强制保留)",required:true,type:"enum"},
+          {key:"location",label:"地点",desc:"地点名称(强制保留)",required:true,type:"string"},
+          {key:"time",label:"时间",desc:"白天/夜晚/黄昏/黎明等",type:"string"},
+          {key:"summary",label:"概要",desc:"本场内容概要",type:"string"},
+          {key:"characters_in_scene",label:"出场角色",desc:"本场出场角色ID列表",type:"list"},
+          {key:"notes",label:"备注",desc:"场次备注",type:"string"}
         ],
         act: [
-          {key:"act_number",label:"幕号",desc:"幕序号(强制保留)",required:true},
-          {key:"title",label:"标题",desc:"幕标题(建立/对抗/解决)"},
-          {key:"summary",label:"概要",desc:"本幕内容摘要"}
+          {key:"act_number",label:"幕号",desc:"幕序号(强制保留)",required:true,type:"int"},
+          {key:"title",label:"标题",desc:"幕标题(建立/对抗/解决)",type:"string"},
+          {key:"summary",label:"概要",desc:"本幕内容摘要",type:"string"},
+          {key:"notes",label:"备注",desc:"幕备注",type:"string"}
         ],
         beat: [
-          {key:"action",label:"动作",desc:"动作和舞台指示"},
-          {key:"dialogue",label:"对白",desc:"角色对白"},
-          {key:"parenthetical",label:"心理状态",desc:"括号指示,如(低语)(停顿)"},
-          {key:"transition",label:"转场",desc:"转场标记,如CUT TO:/FADE OUT."}
+          {key:"action",label:"动作",desc:"动作和舞台指示(action)",type:"beat"},
+          {key:"dialogue",label:"对白",desc:"角色对白(dialogue)",type:"beat"},
+          {key:"parenthetical",label:"心理状态",desc:"括号指示,如(低语)(停顿)",type:"str"},
+          {key:"transition",label:"转场",desc:"转场标记,如CUT TO:/FADE OUT.",type:"beat"}
         ]
       };
 
@@ -1897,8 +1905,9 @@
       for (var g in SETTINGS_DEFS) SETTINGS_FULL[g] = SETTINGS_DEFS[g].map(function(d){return d.key});
 
       window.loadConfig = function() {
-        try { var r = localStorage.getItem("n2s_config"); if (r) return JSON.parse(r); } catch(e) {}
-        return JSON.parse(JSON.stringify(SETTINGS_FULL));
+        var cfg = SETTINGS_FULL;
+        try { var r = localStorage.getItem("n2s_config"); if (r) { var s = JSON.parse(r); for (var g in SETTINGS_FULL) { if (s[g]) cfg[g] = s[g]; } } } catch(e) {}
+        return JSON.parse(JSON.stringify(cfg));
       };
 
       function saveConfig(cfg) { localStorage.setItem("n2s_config", JSON.stringify(cfg)); }
@@ -1923,13 +1932,16 @@
             var checked = req || (cfg[grp.id] && cfg[grp.id].indexOf(d.key) >= 0);
             h += '<div class="settings-row' + (req ? ' required' : '') + '"><label>';
             h += '<input type="checkbox" data-group="' + grp.id + '" data-key="' + d.key + '"' + (checked ? ' checked' : '') + (req ? ' disabled' : '') + ' onchange="onSettingChange()">';
-            h += d.label;
+            h += '<span class="settings-key">' + d.key + '</span>';
+            h += '<span class="settings-label-text">' + d.label + '</span>';
+            h += '<span class="settings-type">' + (d.type || '') + '</span>';
             if (req) h += '<span class="lock">🔒</span>';
             h += '</label><span class="settings-tip">?<span class="settings-tip-text">' + d.desc + '</span></span></div>';
           }
           h += '</div>';
         }
         document.getElementById("settings-body").innerHTML = h;
+        saveConfig(cfg);
         document.getElementById("settings-overlay").classList.add("show");
       }
 

@@ -169,8 +169,8 @@ def _filter_dict(data: dict, config: dict) -> dict:
     if "acts" in result:
         keep_act = set(config.get("act", []))
         keep_scene = set(config.get("scene", []))
+        keep_scene.add("scene_number")
         keep_scene.add("beats")
-        keep_scene.add("heading")
         new_acts = []
         for act in result.get("acts", []):
             new_act = {k: v for k, v in act.items() if k in keep_act}
@@ -181,11 +181,15 @@ def _filter_dict(data: dict, config: dict) -> dict:
                 for sc in act["scenes"]:
                     new_sc = {k: v for k, v in sc.items() if k in keep_scene or k == "scene_number"}
                     if "heading" in sc:
-                        new_sc["heading"] = {
-                            "location_type": sc["heading"]["location_type"],
-                            "location": sc["heading"]["location"],
-                            "time": sc["heading"]["time"],
-                        }
+                        new_heading = {}
+                        if "location_type" in keep_scene:
+                            new_heading["location_type"] = sc["heading"]["location_type"]
+                        if "location" in keep_scene:
+                            new_heading["location"] = sc["heading"]["location"]
+                        if "time" in keep_scene:
+                            new_heading["time"] = sc["heading"]["time"]
+                        if new_heading:
+                            new_sc["heading"] = new_heading
                     if "beats" in sc:
                         keep_beat = set(config.get("beat", []))
                         new_beats = []

@@ -217,6 +217,6 @@ def _parse_location_type(raw: str) -> LocationType:
         return LocationType.INT
     if raw_upper in ("EXT", "外景"):
         return LocationType.EXT
-    if raw_upper in ("INT/EXT", "INT。EXT", "内外景"):
+    if raw_upper in ("INT/EXT", "INT and EXT", "内外景"):
         return LocationType.INT_EXT
     return LocationType.INT
