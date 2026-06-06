@@ -14,6 +14,8 @@ from ..parser import parse_file
 from ..pipeline import run_pipeline
 from ..schema.validator import save_screenplay, validate_screenplay
 
+import yaml as _yaml
+
 _BASE_DIR = Path(__file__).resolve().parent
 _OUTPUT_DIR = Path("output")
 
@@ -117,6 +119,97 @@ async def api_save(request: Request):
     out.write_text(yaml_text, encoding="utf-8")
 
     return {"ok": True, "path": str(out), "filename": out.name}
+
+
+@app.post("/api/filter")
+async def api_filter(request: Request):
+    """根据配置过滤 YAML 字段。"""
+    body = await request.json()
+    yaml_text = body.get("yaml", "")
+    config = body.get("config", {})
+    if not yaml_text.strip():
+        raise HTTPException(400, "YAML 为空")
+
+    try:
+        data = _yaml.safe_load(yaml_text)
+        data = _filter_dict(data, config)
+        filtered = _yaml.dump(data, allow_unicode=True, sort_keys=False, default_flow_style=False)
+        return {"ok": True, "yaml": filtered}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def _filter_dict(data: dict, config: dict) -> dict:
+    """递归过滤 YAML 数据。"""
+    if not isinstance(data, dict):
+        return data
+
+    result = dict(data)  # shallow copy
+
+    # meta
+    if "title" in result and "format" in result:
+        keep = set(config.get("meta", []))
+        keep.add("title")
+        result = {k: v for k, v in result.items() if k in keep or k == "title"}
+
+    # characters
+    if result.get("characters") is not None and isinstance(result.get("characters"), list):
+        keep_char = set(config.get("character", []))
+        keep_char.update(["id", "name"])
+        result["characters"] = [
+            {k: v for k, v in c.items() if k in keep_char}
+            for c in result["characters"]
+        ]
+
+    # structure
+    if "structure" in result:
+        result["structure"] = _filter_dict(result["structure"], config)
+
+    # acts
+    if "acts" in result:
+        keep_act = set(config.get("act", []))
+        keep_scene = set(config.get("scene", []))
+        keep_scene.add("beats")
+        keep_scene.add("heading")
+        new_acts = []
+        for act in result.get("acts", []):
+            new_act = {k: v for k, v in act.items() if k in keep_act}
+            if "act_number" not in new_act:
+                new_act["act_number"] = act.get("act_number", 1)
+            if "scenes" in act:
+                scenes = []
+                for sc in act["scenes"]:
+                    new_sc = {k: v for k, v in sc.items() if k in keep_scene or k == "scene_number"}
+                    if "heading" in sc:
+                        new_sc["heading"] = {
+                            "location_type": sc["heading"]["location_type"],
+                            "location": sc["heading"]["location"],
+                            "time": sc["heading"]["time"],
+                        }
+                    if "beats" in sc:
+                        keep_beat = set(config.get("beat", []))
+                        new_beats = []
+                        for b in sc["beats"]:
+                            if b.get("type") not in keep_beat:
+                                continue
+                            new_b = {"type": b["type"]}
+                            if b["type"] == "action":
+                                new_b["description"] = b.get("description", "")
+                            elif b["type"] == "dialogue":
+                                new_b["character"] = b.get("character", "")
+                                new_b["line"] = b.get("line", "")
+                                if "parenthetical" in keep_beat and b.get("parenthetical"):
+                                    new_b["parenthetical"] = b["parenthetical"]
+                            elif b["type"] == "transition":
+                                new_b["transition"] = b.get("transition", "")
+                            new_beats.append(new_b)
+                        new_sc["beats"] = new_beats
+                    scenes.append(new_sc)
+                new_act["scenes"] = scenes
+            new_acts.append(new_act)
+        result["acts"] = new_acts
+
+    return result
 
 
 @app.get("/api/download/{filename}")
