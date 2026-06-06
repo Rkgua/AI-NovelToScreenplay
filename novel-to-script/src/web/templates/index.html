@@ -299,7 +299,27 @@
         background: #fff;
       }
 
-      /* timeline */
+      /* meta + chars in timeline */
+      .tl-section { padding:6px 0; }
+      .tl-section h4 { font-size:10px; color:#999; font-weight:600; padding:4px 8px; margin:0; border-bottom:1px solid #f0f0f0; text-transform:uppercase; letter-spacing:.5px; }
+      .tl-meta-row { display:flex; gap:8px; padding:3px 8px; font-size:11px; }
+      .tl-meta-row:hover { background:#f9fafb; }
+      .tl-meta-row .tl-key { color:#999; flex-shrink:0; min-width:60px; }
+      .tl-meta-row .tl-val { color:#444; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .tl-meta-row .tl-edit { display:none; font-size:10px; color:#999; cursor:pointer; }
+      .tl-meta-row:hover .tl-edit { display:block; }
+      .tl-chars-list { display:block; padding:0; }
+      .tl-char-card { display:flex; align-items:flex-start; gap:8px; padding:6px 8px; border-left:3px solid #5b9bd5; cursor:pointer; transition:.1s; }
+      .tl-char-card:hover { background:#f9fafb; }
+      .tl-char-card .tl-icon { width:16px; height:16px; border-radius:50%; flex-shrink:0; margin-top:1px; display:flex; align-items:center; justify-content:center; font-size:9px; color:#fff; background:#5b9bd5; }
+      .tl-char-card .tl-body { flex:1; min-width:0; }
+      .tl-char-card .tl-body .tl-char-id { font-size:10px; font-weight:700; color:#5b9bd5; }
+      .tl-char-card .tl-body .tl-char-name { font-size:12px; font-weight:600; color:#333; }
+      .tl-char-card .tl-body .tl-char-role { font-size:9px; color:#fff; background:#999; padding:1px 5px; border-radius:2px; margin-left:4px; vertical-align:middle; }
+      .tl-char-card .tl-body .tl-char-detail { font-size:10px; color:#888; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; margin-top:1px; }
+      .tl-char-card .tl-edit { display:none; flex-shrink:0; font-size:10px; color:#999; cursor:pointer; padding:1px 4px; }
+      .tl-char-card:hover .tl-edit { display:block; }
+      .tl-char-card .tl-edit:hover { color:#111; }
       #timeline {
         overflow-y: auto;
       }
@@ -691,165 +711,335 @@
       // ── 时间线 ──
       function renderTimeline() {
         const y = document.getElementById("yaml-editor").value;
-        const beats = parseBeats(y);
+        const data = parseTimelineData(y);
+        _tlData = data;
         const tl = document.getElementById("timeline");
-        if (!beats.length) {
-          tl.innerHTML = '<div class="tl-empty">转换后将显示时间线</div>';
-          return;
+        if (!data.meta.length && !data.characters.length && !data.beats.length) {
+          tl.innerHTML = '<div class="tl-empty">转换后将显示时间线</div>'; return;
         }
 
-        let sceneIdx = -1;
         let html = "";
-        for (const b of beats) {
+
+        // meta
+        if (data.meta.length) {
+          html += '<div class="tl-section"><h4>剧本信息</h4>';
+          for (const f of data.meta) {
+            html += '<div class="tl-meta-row" onclick="editMeta(' + f.yamlLine + ',\'' + escapeHtml(f.key) + '\',\'' + escapeHtml(f.value) + '\')"><span class="tl-key">' + escapeHtml(f.key) + '</span><span class="tl-val">' + escapeHtml(f.value) + '</span><span class="tl-edit">edit</span></div>';
+          }
+          html += '</div>';
+        }
+
+        // characters
+        if (data.characters.length) {
+          html += '<div class="tl-section"><h4>角色</h4><div class="tl-chars-list">';
+          for (const c of data.characters) {
+            html += '<div class="tl-char-card" onclick="editChar(\'' + c.id + '\',' + c.yamlLine + ')">';
+            html += '<span class="tl-icon">' + escapeHtml(c.id[0] || '?') + '</span>';
+            html += '<div class="tl-body">';
+            html += '<span class="tl-char-id">' + escapeHtml(c.id) + '</span> ';
+            html += '<span class="tl-char-name">' + escapeHtml(c.name) + '</span>';
+            html += '<span class="tl-char-role">' + escapeHtml(c.role || '') + '</span>';
+            html += '<br><span class="tl-char-detail">';
+            var parts = [];
+            if (c.gender) parts.push(c.gender);
+            if (c.age) parts.push(c.age);
+            if (c.archetype) parts.push(c.archetype);
+            if (c.traits) parts.push(c.traits);
+            if (c.relationships) parts.push(c.relationships);
+            if (c.aliases) parts.push('别:' + c.aliases);
+            html += escapeHtml(parts.join(' · '));
+            html += '</span>';
+            html += '</div>';
+            html += '<span class="tl-edit">edit</span>';
+            html += '</div>';
+          }
+          html += '</div></div>';
+        }
+
+        // beats (scenes)
+        let sceneIdx = -1;
+        for (const b of data.beats) {
           if (b.sceneIdx !== sceneIdx) {
             sceneIdx = b.sceneIdx;
-            if (sceneIdx > 0) html += "</div>";
-            html +=
-              '<div class="tl-scene"><h4>' +
-              escapeHtml(b.sceneTitle || "场景 " + (sceneIdx + 1)) +
-              "</h4>";
+            if (sceneIdx > 0) html += '</div>';
+            html += '<div class="tl-scene"><h4>' + escapeHtml(b.sceneTitle || '场景 ' + (sceneIdx + 1)) + '</h4>';
           }
-          const icon =
-            { action: "A", dialogue: "D", transition: "T" }[b.type] || "?";
-          const body =
-            b.type === "dialogue"
-              ? '<span class="tl-char">' +
-                escapeHtml(b.character || "?") +
-                '</span><br><span class="tl-text">' +
-                escapeHtml(b.line || "") +
-                "</span>"
-              : b.type === "transition"
-                ? '<span class="tl-text">' +
-                  escapeHtml(b.transition || "") +
-                  "</span>"
-                : '<span class="tl-desc">' +
-                  escapeHtml(b.description || "") +
-                  "</span>";
-          html +=
-            '<div class="tl-beat ' +
-            b.type +
-            '" data-idx="' +
-            b.idx +
-            '" onclick="editBeatInline(' +
-            b.idx +
-            ')" onmouseenter="showBeatTip(event,' +
-            b.idx +
-            ')" onmouseleave="hideBeatTip()">';
-          html += '<span class="tl-icon">' + icon + "</span>";
-          html += '<div class="tl-body">' + body + "</div>";
-          html += '<span class="tl-edit">edit</span>';
-          html += "</div>";
+          const icon = {action:"A",dialogue:"D",transition:"T"}[b.type] || "?";
+          const body = b.type === "dialogue"
+            ? '<span class="tl-char">' + escapeHtml(b.character||"?") + '</span><br><span class="tl-text">' + escapeHtml(b.line||"") + '</span>'
+            : b.type === "transition"
+            ? '<span class="tl-text">' + escapeHtml(b.transition||"") + '</span>'
+            : '<span class="tl-desc">' + escapeHtml(b.description||"") + '</span>';
+          html += '<div class="tl-beat ' + b.type + '" data-idx="' + b.idx + '" onclick="editBeatInline(' + b.idx + ')" onmouseenter="showBeatTip(event,' + b.idx + ')" onmouseleave="hideBeatTip()">';
+          html += '<span class="tl-icon">' + icon + '</span><div class="tl-body">' + body + '</div><span class="tl-edit">edit</span></div>';
         }
-        html += "</div>";
+        html += '</div>';
         tl.innerHTML = html;
-        _beats = beats;
 
-        // sync scroll
         const ed = document.getElementById("yaml-editor");
-        tl.scrollTop = Math.floor(
-          ed.scrollTop * (tl.scrollHeight / ed.scrollHeight),
-        );
+        tl.scrollTop = Math.floor(ed.scrollTop * (tl.scrollHeight / ed.scrollHeight));
       }
 
-      let _beats = [];
+      let _tlData = null;
       let _editIdx = -1;
 
-      function parseBeats(yaml) {
+      function parseTimelineData(yaml) {
         const lines = yaml.split("\n");
+        const metaFields = [];
+        const characters = [];
         const beats = [];
-        let sceneIdx = -1,
-          sceneTitle = "",
-          inBeats = false,
-          beat = null;
+        let inMeta = false, inChars = false, inStruct = false;
+        let sceneIdx = -1, sceneTitle = "", beat = null;
 
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
-          // scene detection
-          const sm = line.match(/^(\s*)- scene_number:\s*(\d+)/);
-          if (sm) {
-            sceneIdx = parseInt(sm[2]) - 1;
-            sceneTitle = "Scene " + sm[2];
+
+          // section boundaries
+          const trimmed = line.trim();
+          if (trimmed === "meta:") { inMeta = true; inChars = false; continue; }
+          if (trimmed === "characters:") { inMeta = false; inChars = true; continue; }
+          if (trimmed === "structure:") { inMeta = false; inChars = false; inStruct = true; continue; }
+
+          // meta fields
+          if (inMeta) {
+            const m = line.match(/^\s+(\w+):\s*(.*)/);
+            if (m) metaFields.push({key:m[1], value:(m[2]||"").replace(/^["']|["']$/g,""), yamlLine:i+1});
+            continue;
           }
+
+          // character entries
+          if (inChars) {
+            const idm = line.match(/^\s*- id:\s*(.+)/);
+            if (idm) {
+              let c = {id:idm[1].trim(), name:"", role:"", desc:"", gender:"", age:"", archetype:"", aliases:"", traits:"", relationships:"", notes:"", yamlLine:i+1};
+              for (let j = i+1; j < lines.length; j++) {
+                const nl = lines[j];
+                if (nl.trim().startsWith("- id:") || nl.trim() === "structure:") break;
+                const fm = nl.match(/^\s+(\w+):\s*(.*)/);
+                if (!fm) continue;
+                const key = fm[1], val = fm[2].trim().replace(/^['"]|['"]$/g, "");
+                if (key === "name") c.name = val;
+                else if (key === "role") c.role = val;
+                else if (key === "description") c.desc = val;
+                else if (key === "gender") c.gender = val;
+                else if (key === "age") c.age = val;
+                else if (key === "archetype") c.archetype = val;
+                else if (key === "notes" && val) c.notes = val;
+                else if (key === "aliases" && val === "") {
+                  let ali = [];
+                  for (let k = j+1; k < lines.length; k++) {
+                    const am = lines[k].match(/^\s+- (.+)/);
+                    if (am) ali.push(am[1].trim()); else break;
+                  }
+                  c.aliases = ali.join(", ");
+                }
+                else if (key === "traits" && val === "") {
+                  let tr = [];
+                  for (let k = j+1; k < lines.length; k++) {
+                    const tm = lines[k].match(/^\s+- (.+)/);
+                    if (tm) tr.push(tm[1].trim()); else break;
+                  }
+                  c.traits = tr.join(", ");
+                }
+                else if (key === "relationships" && val === "") {
+                  let rel = 0;
+                  for (let k = j+1; k < lines.length; k++) {
+                    if (lines[k].match(/^\s+- character:/)) rel++;
+                    if (!lines[k].match(/^\s{6,}/)) break;
+                  }
+                  c.relationships = rel + "条";
+                }
+              }
+              characters.push(c);
+            }
+            continue;
+          }
+
+          // scene detection
+          const sm = line.match(/^(?:\s*-)?\s*scene_number:\s*(\d+)/);
+          if (sm) { sceneIdx = parseInt(sm[1]) - 1; sceneTitle = "Scene " + sm[1]; }
           const ssm = line.match(/^\s+summary:\s*(.+)/);
           if (ssm && sceneIdx >= 0) sceneTitle = ssm[1].trim();
-          const shm = line.match(/^\s+location:\s*(.+)/);
-          if (shm && sceneIdx >= 0)
-            sceneTitle = shm[1].trim() + " - Scene " + (sceneIdx + 1);
+          const hlm = line.match(/^\s+location:\s*(.+)/);
+          if (hlm && sceneIdx >= 0) sceneTitle = hlm[1].trim() + " - Scene " + (sceneIdx + 1);
 
           // beat detection
           if (line.match(/^\s+- type:\s*(action|dialogue|transition)/)) {
             if (beat) beats.push(beat);
-            const bt = line.match(/type:\s*(action|dialogue|transition)/)[1];
-            beat = {
-              type: bt,
-              idx: beats.length,
-              sceneIdx: sceneIdx,
-              sceneTitle: sceneTitle,
-              yamlLine: i + 1,
-              description: "",
-              character: "",
-              line: "",
-              transition: "",
-              parenthetical: "",
-            };
+            beat = {type:line.match(/type:\s*(action|dialogue|transition)/)[1], idx:beats.length, sceneIdx, sceneTitle, yamlLine:i+1, description:"", character:"", line:"", transition:"", parenthetical:""};
             continue;
           }
-          if (beat && line.match(/^\s+description:\s*(.+)/)) {
-            beat.description = line
-              .match(/description:\s*(.+)/)[1]
-              .trim()
-              .replace(/^["']|["']$/g, "");
-          }
-          if (beat && line.match(/^\s+character:\s*(.+)/)) {
-            beat.character = line.match(/character:\s*(.+)/)[1].trim();
-          }
+          if (beat && line.match(/^\s+description:\s*(.+)/)) { beat.description = line.match(/description:\s*(.+)/)[1].trim().replace(/^["']|["']$/g,""); }
+          if (beat && line.match(/^\s+character:\s*(.+)/)) { beat.character = line.match(/character:\s*(.+)/)[1].trim(); }
           if (beat && line.match(/^\s+line:\s*(.+)/)) {
-            let l = line
-              .match(/line:\s*(.+)/)[1]
-              .trim()
-              .replace(/^["']|["']$/g, "");
-            // multi-line (folded) support
+            let l = line.match(/line:\s*(.+)/)[1].trim().replace(/^["']|["']$/g,"");
             if (l.endsWith("|-") || l.endsWith(">")) {
               let ml = "";
-              for (let j = i + 1; j < lines.length; j++) {
+              for (let j = i+1; j < lines.length; j++) {
                 const nl = lines[j];
                 if (!nl.match(/^\s{10,}/)) break;
-                ml += (ml ? " " : "") + nl.trim();
+                ml += (ml?" ":"") + nl.trim();
                 i = j;
               }
-              l = l.slice(0, -1) + ml;
+              l = l.slice(0,-1) + ml;
             }
             beat.line = l;
           }
-          if (beat && line.match(/^\s+transition:\s*(.+)/)) {
-            beat.transition = line
-              .match(/transition:\s*(.+)/)[1]
-              .trim()
-              .replace(/^["']|["']$/g, "");
-          }
-          if (beat && line.match(/^\s+parenthetical:\s*(.+)/)) {
-            beat.parenthetical = line
-              .match(/parenthetical:\s*(.+)/)[1]
-              .trim()
-              .replace(/^["']|["']$/g, "");
-          }
+          if (beat && line.match(/^\s+transition:\s*(.+)/)) { beat.transition = line.match(/transition:\s*(.+)/)[1].trim().replace(/^["']|["']$/g,""); }
+          if (beat && line.match(/^\s+parenthetical:\s*(.+)/)) { beat.parenthetical = line.match(/parenthetical:\s*(.+)/)[1].trim().replace(/^["']|["']$/g,""); }
         }
         if (beat) beats.push(beat);
-        return beats;
+        return {meta:metaFields, characters, beats};
       }
 
+      function editMeta(lineNum, key, curVal) {
+        cancelEdit();
+        _editIdx = -2; // meta mode
+        _editInfo = {lineNum,key};
+        const tl = document.getElementById("timeline");
+        const row = tl.querySelector('.tl-meta-row[onclick*="' + lineNum + '"]');
+        if (!row) return;
+        const div = document.createElement("div");
+        div.className = "tl-edit-inline";
+        div.style.display = "block";
+        div.innerHTML = '<textarea>' + escapeHtml(curVal) + '</textarea><div class="tl-edit-btns"><button onclick="saveMetaEdit()">保存</button><button onclick="cancelEdit()">取消</button></div>';
+        row.parentNode.insertBefore(div, row.nextSibling);
+      }
+
+      function saveMetaEdit() {
+        if (_editIdx !== -2) return;
+        const div = document.querySelector(".tl-edit-inline");
+        if (!div) return;
+        const ta = div.querySelector("textarea");
+        if (!ta) return;
+        const newVal = ta.value.trim();
+        if (!newVal) { cancelEdit(); return; }
+        const editor = document.getElementById("yaml-editor");
+        const lines = editor.value.split("\n");
+        updateYamlLine(lines, _editInfo.lineNum, _editInfo.key, '"' + newVal + '"');
+        editor.value = lines.join("\n");
+        cancelEdit();
+        renderTimeline();
+      }
+
+      function editChar(cid, lineNum) {
+        cancelEdit();
+        _editIdx = -3;
+        _editInfo = {lineNum};
+        const editor = document.getElementById("yaml-editor");
+        const lines = editor.value.split("\n");
+        let vals = {};
+        for (let i = lineNum-1; i < Math.min(lineNum+30, lines.length); i++) {
+          const nl = lines[i];
+          if (nl.trim().startsWith("- id:") && i > lineNum-1) break;
+          const fm = nl.match(/^\s+(\w+):\s*(.*)/);
+          if (!fm) continue;
+          const key = fm[1], val = fm[2].trim().replace(/^['"]|['"]$/g, "");
+          if (["name","role","description","gender","age","archetype","notes"].includes(key) && val) vals[key] = val;
+          if (key === "aliases" && !vals.aliases) {
+            let a = []; for (let k = i+1; k < lines.length; k++) { const am = lines[k].match(/^\s+- (.+)/); if (am) a.push(am[1].trim()); else break; }
+            if (a.length) vals.aliases = a.join(", ");
+          }
+          if (key === "traits" && !vals.traits) {
+            let t = []; for (let k = i+1; k < lines.length; k++) { const tm = lines[k].match(/^\s+- (.+)/); if (tm) t.push(tm[1].trim()); else break; }
+            if (t.length) vals.traits = t.join(", ");
+          }
+        }
+        const tl = document.getElementById("timeline");
+        const tag = tl.querySelector('.tl-char-card[onclick*="' + cid + '"]');
+        if (!tag) return;
+        const div = document.createElement("div");
+        div.className = "tl-edit-inline";
+        div.style.display = "block";
+        div.innerHTML = '<textarea rows="12">' + escapeHtml(
+          "name: " + (vals.name||"") + "\n" +
+          "role: " + (vals.role||"") + "\n" +
+          "gender: " + (vals.gender||"") + "\n" +
+          "age: " + (vals.age||"") + "\n" +
+          "archetype: " + (vals.archetype||"") + "\n" +
+          "traits: " + (vals.traits||"") + "\n" +
+          "aliases: " + (vals.aliases||"") + "\n" +
+          "description: " + (vals.description||"") + "\n" +
+          "notes: " + (vals.notes||"")
+        ) + '</textarea><div class="tl-edit-btns"><button onclick="saveCharEdit()">保存</button><button onclick="cancelEdit()">取消</button></div>';
+        tag.parentNode.insertBefore(div, tag.nextSibling);
+      }
+
+      function saveCharEdit() {
+        if (_editIdx !== -3) return;
+        const div = document.querySelector(".tl-edit-inline");
+        if (!div) return;
+        const ta = div.querySelector("textarea");
+        if (!ta) return;
+        const edits = {};
+        ta.value.split("\n").forEach(function(l) {
+          const m = l.match(/^(\w+):\s*(.*)/);
+          if (m) edits[m[1]] = m[2].trim();
+        });
+        const editor = document.getElementById("yaml-editor");
+        const lines = editor.value.split("\n");
+        const ln = _editInfo.lineNum - 1;
+
+        // Process each field
+        const fieldOrder = ["name","role","gender","age","archetype","traits","aliases","description","notes"];
+        for (let i = ln; i < Math.min(ln+60, lines.length); i++) {
+          if (lines[i].trim().startsWith("- id:") && i > ln) break;
+          for (const key of fieldOrder) {
+            if (!edits[key]) continue;
+            const fm = lines[i].match(new RegExp("^(\\s+)" + key + ":\\s*(.*)"));
+            if (fm) {
+              if ((key === "traits" || key === "aliases")) {
+                var indent = fm[1];
+                // Delete old list items after this key
+                var delCount = 0;
+                for (var k = i+1; k < lines.length; k++) {
+                  var kline = lines[k];
+                  if (kline.match(new RegExp("^" + indent.replace(/([.*+?^=!:${}()|[\]\/\\])/g, "\\$1") + "\\s{2}- "))) {
+                    delCount++;
+                  } else {
+                    break;
+                  }
+                }
+                if (delCount > 0) lines.splice(i+1, delCount);
+                // Insert new items
+                var items = edits[key].split(",").map(function(s){return s.trim()}).filter(Boolean);
+                if (items.length) {
+                  var newLines = items.map(function(it){return indent + "  - " + it});
+                  lines.splice(i+1, 0, ...newLines);
+                }
+                lines[i] = indent + key + ":";
+                delete edits[key];
+              } else {
+                lines[i] = fm[1] + key + ": " + edits[key];
+                delete edits[key];
+              }
+              break;
+            }
+          }
+        }
+        editor.value = lines.join("\n");
+        cancelEdit();
+        renderTimeline();
+      }
+
+      function cancelEdit() {
+        const old = document.querySelector(".tl-edit-inline");
+        if (old) old.remove();
+        _editIdx = -1;
+      }
+
+      let _editInfo = null;
+
       function editBeatInline(idx) {
-        const b = _beats[idx];
+        const b = (_tlData && _tlData.beats) ? _tlData.beats[idx] : null;
         if (!b) return;
         _editIdx = idx;
+        _editInfo = null;
         const tl = document.getElementById("timeline");
         const target = tl.querySelector('.tl-beat[data-idx="' + idx + '"]');
         if (!target) return;
-
-        // remove old inline editor
         const old = tl.querySelector(".tl-edit-inline");
         if (old) old.remove();
-
         const div = document.createElement("div");
         div.className = "tl-edit-inline";
         div.style.display = "block";
@@ -857,10 +1047,7 @@
         if (b.type === "action") val = b.description;
         else if (b.type === "dialogue") val = b.character + ": " + b.line;
         else if (b.type === "transition") val = b.transition;
-        div.innerHTML =
-          "<textarea>" +
-          escapeHtml(val) +
-          '</textarea><div class="tl-edit-btns"><button onclick="saveBeatEdit()">保存</button><button onclick="cancelBeatEdit()">取消</button></div>';
+        div.innerHTML = '<textarea>' + escapeHtml(val) + '</textarea><div class="tl-edit-btns"><button onclick="saveBeatEdit()">保存</button><button onclick="cancelEdit()">取消</button></div>';
         target.parentNode.insertBefore(div, target.nextSibling);
       }
 
@@ -871,46 +1058,26 @@
         const ta = div.querySelector("textarea");
         if (!ta) return;
         const newVal = ta.value.trim();
-        if (!newVal) {
-          cancelBeatEdit();
-          return;
-        }
-
-        const b = _beats[_editIdx];
+        if (!newVal) { cancelEdit(); return; }
+        const b = (_tlData && _tlData.beats) ? _tlData.beats[_editIdx] : null;
+        if (!b) { cancelEdit(); return; }
         const editor = document.getElementById("yaml-editor");
         const lines = editor.value.split("\n");
 
         if (b.type === "action") {
-          updateYamlLine(lines, b.yamlLine, "description", newVal);
+          updateYamlLine(lines, b.yamlLine, "description", '"' + newVal + '"');
         } else if (b.type === "dialogue") {
           const colon = newVal.indexOf(":");
           if (colon > 0) {
-            updateYamlLine(
-              lines,
-              b.yamlLine,
-              "character",
-              newVal.substring(0, colon).trim(),
-            );
-            updateYamlLine(
-              lines,
-              b.yamlLine + 1,
-              "line",
-              '"' + newVal.substring(colon + 1).trim() + '"',
-            );
+            updateYamlLine(lines, b.yamlLine, "character", newVal.substring(0, colon).trim());
+            updateYamlLine(lines, b.yamlLine + 1, "line", '"' + newVal.substring(colon + 1).trim() + '"');
           }
         } else if (b.type === "transition") {
-          updateYamlLine(lines, b.yamlLine, "transition", newVal);
+          updateYamlLine(lines, b.yamlLine, "transition", '"' + newVal + '"');
         }
-
         editor.value = lines.join("\n");
-        cancelBeatEdit();
+        cancelEdit();
         renderTimeline();
-      }
-
-      function cancelBeatEdit() {
-        const old = document.querySelector(".tl-edit-inline");
-        if (old) old.remove();
-        _editIdx = -1;
       }
 
       function updateYamlLine(lines, baseLine, field, value) {
@@ -924,7 +1091,7 @@
       }
 
       function showBeatTip(e, idx) {
-        const b = _beats[idx];
+        const b = (_tlData && _tlData.beats) ? _tlData.beats[idx] : null;
         if (!b) return;
         let tip = document.getElementById("beat-tip");
         if (!tip) {
