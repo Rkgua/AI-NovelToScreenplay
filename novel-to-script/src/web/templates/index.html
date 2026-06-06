@@ -281,27 +281,12 @@
         min-height: 0;
       }
       .yaml-ln {
-        flex-shrink: 0;
-        width: 44px;
-        overflow-y: hidden;
-        overflow-x: hidden;
-        background: #f0f1f3;
-        border: 1px solid #dcdee2;
-        border-right: none;
-        padding: 12px 0;
-        font:
-          12px "SF Mono",
-          "Consolas",
-          monospace;
-        line-height: 1.55;
-        text-align: right;
-        color: #bbb;
-        user-select: none;
-        align-self: stretch;
+        flex-shrink:0; width:44px; overflow:hidden; background:#f0f1f3;
+        border:1px solid #dcdee2; border-right:none; padding:12px 0;
+        font:12px "SF Mono","Consolas",monospace; line-height:1.55;
+        text-align:right; color:#bbb; user-select:none;
       }
-      .yaml-ln div {
-        padding-right: 8px;
-      }
+      .yaml-ln div { padding-right:8px; }
       #yaml-editor {
         flex: 1 1 auto;
         background: #fafbfc;
@@ -1577,6 +1562,7 @@
           var h = "";
           for (var i = 1; i <= Math.max(n, 1); i++) h += "<div>" + i + "</div>";
           gutter.innerHTML = h;
+          gutter.style.height = editorLG.clientHeight + "px";
         }
         function syncLG() {
           gutter.scrollTop = editorLG.scrollTop;
@@ -1642,6 +1628,7 @@
               "status status-ok";
             document.getElementById("status-box").textContent = "校验通过";
             renderTimeline();
+            if (window.refreshLineNumbers) window.refreshLineNumbers();
             showToast("校验通过", "info");
           } else {
             renderErrors(y, d.errors);
@@ -1650,6 +1637,7 @@
               "status status-err";
             document.getElementById("status-box").textContent =
               d.errors.length + " 处错误";
+            if (window.refreshLineNumbers) window.refreshLineNumbers();
           }
         } catch (e) {
           showToast("校验失败: " + e.message, "error");
