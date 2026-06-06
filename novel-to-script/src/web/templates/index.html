@@ -273,7 +273,6 @@
         justify-content: flex-end;
         position: sticky;
         top: 0;
-        background: #fff;
         z-index: 10;
       }
       .yaml-editor-wrap {
@@ -284,7 +283,8 @@
       .yaml-ln {
         flex-shrink: 0;
         width: 44px;
-        overflow: hidden;
+        overflow-y: hidden;
+        overflow-x: hidden;
         background: #f0f1f3;
         border: 1px solid #dcdee2;
         border-right: none;
@@ -297,7 +297,7 @@
         text-align: right;
         color: #bbb;
         user-select: none;
-        overflow-y: hidden;
+        align-self: stretch;
       }
       .yaml-ln div {
         padding-right: 8px;
@@ -757,7 +757,7 @@
               </button>
             </div>
             <div class="yaml-editor-wrap">
-              <div class="yaml-ln" id="yaml-ln"><div>1</div></div>
+              <div class="yaml-ln" id="yaml-ln"></div>
               <textarea
                 id="yaml-editor"
                 placeholder="转换结果将显示在此..."
@@ -827,6 +827,8 @@
           for (var i = 1; i <= n; i++) h += "<div>" + i + "</div>";
           gutter.innerHTML = h;
           gutter.scrollTop = editor.scrollTop;
+          // also refresh on timeline re-render
+          if (window.refreshLineNumbers) window.refreshLineNumbers();
           document.getElementById("stats-box").style.display = "block";
           document.getElementById("stats-box").innerHTML =
             "角色:<span>" +
@@ -994,6 +996,7 @@
         tl.scrollTop = Math.floor(
           ed.scrollTop * (tl.scrollHeight / ed.scrollHeight),
         );
+        if (window.refreshLineNumbers) window.refreshLineNumbers();
       }
 
       let _tlData = null;
@@ -1578,6 +1581,10 @@
         function syncLG() {
           gutter.scrollTop = editorLG.scrollTop;
         }
+        window.refreshLineNumbers = function () {
+          updateLG();
+          syncLG();
+        };
         editorLG.addEventListener("input", updateLG);
         editorLG.addEventListener("scroll", syncLG);
         updateLG();
