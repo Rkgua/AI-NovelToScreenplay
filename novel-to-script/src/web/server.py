@@ -169,6 +169,7 @@ def _filter_dict(data: dict, config: dict) -> dict:
     if "acts" in result:
         keep_act = set(config.get("act", []))
         keep_act.add("act_number")
+        keep_act.add("scenes")
         keep_scene = set(config.get("scene", []))
         keep_scene.add("scene_number")
         keep_scene.add("heading")
@@ -201,11 +202,17 @@ def _filter_dict(data: dict, config: dict) -> dict:
                             new_b = {"type": b["type"]}
                             if b["type"] == "action":
                                 new_b["description"] = b.get("description", "")
+                                notes = b.get("notes")
+                                if notes:
+                                    new_b["notes"] = notes
                             elif b["type"] == "dialogue":
                                 new_b["character"] = b.get("character", "")
                                 new_b["line"] = b.get("line", "")
-                                if "parenthetical" in keep_beat and b.get("parenthetical"):
-                                    new_b["parenthetical"] = b["parenthetical"]
+                                if "parenthetical" in keep_beat:
+                                    new_b["parenthetical"] = b.get("parenthetical", "")
+                                notes = b.get("notes")
+                                if notes:
+                                    new_b["notes"] = notes
                             elif b["type"] == "transition":
                                 new_b["transition"] = b.get("transition", "")
                             new_beats.append(new_b)
