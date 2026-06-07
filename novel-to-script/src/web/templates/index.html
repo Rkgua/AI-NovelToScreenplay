@@ -1122,17 +1122,21 @@
                 else if (key === "archetype") c.archetype = val;
                 else if (key === "notes" && val) c.notes = val;
                 else if (key === "aliases" && val === "") {
+                  const km = nl.match(/^(\s+)/);
+                  const mi = km ? km[0].length + 1 : 2;
                   let ali = [];
                   for (let k = j + 1; k < lines.length; k++) {
-                    const am = lines[k].match(/^\s+- (.+)/);
+                    const am = lines[k].match(new RegExp("^\\s{" + mi + ",}- (.+)"));
                     if (am) ali.push(am[1].trim());
                     else break;
                   }
                   c.aliases = ali.join(", ");
                 } else if (key === "traits" && val === "") {
+                  const km = nl.match(/^(\s+)/);
+                  const mi = km ? km[0].length + 1 : 2;
                   let tr = [];
                   for (let k = j + 1; k < lines.length; k++) {
-                    const tm = lines[k].match(/^\s+- (.+)/);
+                    const tm = lines[k].match(new RegExp("^\\s{" + mi + ",}- (.+)"));
                     if (tm) tr.push(tm[1].trim());
                     else break;
                   }
@@ -1323,18 +1327,22 @@
           )
             vals[key] = val;
           if (key === "aliases" && !vals.aliases) {
+            const km = nl.match(/^(\s+)/);
+            const mi = km ? km[0].length + 1 : 2;
             let a = [];
             for (let k = i + 1; k < lines.length; k++) {
-              const am = lines[k].match(/^\s+- (.+)/);
+              const am = lines[k].match(new RegExp("^\\s{" + mi + ",}- (.+)"));
               if (am) a.push(am[1].trim());
               else break;
             }
             if (a.length) vals.aliases = a.join(", ");
           }
           if (key === "traits" && !vals.traits) {
+            const km = nl.match(/^(\s+)/);
+            const mi = km ? km[0].length + 1 : 2;
             let t = [];
             for (let k = i + 1; k < lines.length; k++) {
-              const tm = lines[k].match(/^\s+- (.+)/);
+              const tm = lines[k].match(new RegExp("^\\s{" + mi + ",}- (.+)"));
               if (tm) t.push(tm[1].trim());
               else break;
             }
@@ -1427,7 +1435,7 @@
                       new RegExp(
                         "^" +
                           indent.replace(/([.*+?^=!:${}()|[\]\/\\])/g, "\\$1") +
-                          "\\s{2}- ",
+                          "\\s+- ",
                       ),
                     )
                   ) {
