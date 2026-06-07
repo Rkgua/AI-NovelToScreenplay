@@ -168,8 +168,10 @@ def _filter_dict(data: dict, config: dict) -> dict:
     # acts
     if "acts" in result:
         keep_act = set(config.get("act", []))
+        keep_act.add("act_number")
         keep_scene = set(config.get("scene", []))
         keep_scene.add("scene_number")
+        keep_scene.add("heading")
         keep_scene.add("beats")
         new_acts = []
         for act in result.get("acts", []):

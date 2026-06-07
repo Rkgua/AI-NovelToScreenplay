@@ -985,11 +985,10 @@
             if (b.sceneLocType) hp.push(b.sceneLocType);
             if (b.sceneLoc) hp.push(b.sceneLoc);
             if (b.sceneTime) hp.push(b.sceneTime);
-            if (hp.length)
-              html +=
-                '<div class="tl-scene-hover">' +
-                escapeHtml(hp.join(" · ")) +
-                "</div>";
+            html +=
+              '<div class="tl-scene-hover">' +
+              escapeHtml(hp.join(" · ")) +
+              "</div>";
           }
           // filter beat type by config
           if (cfg.beat.indexOf(b.type) < 0) continue;
