@@ -32,6 +32,10 @@ def parse_epub(path: str | Path) -> list[Chapter]:
     chapter_idx = 0
 
     for doc in documents:
+        fname = doc.file_name.lower()
+        if "nav" in fname or "ncx" in fname or "toc" in fname:
+            continue
+
         soup = BeautifulSoup(doc.get_body_content(), "lxml")
         text = soup.get_text(separator="\n")
         text = _clean_text(text)

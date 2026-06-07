@@ -28,9 +28,9 @@ class Chapter:
         return f"Chapter({self.index}, {self.title!r}, {self.char_count} chars)"
 
 
-# 中文章节正则
+# 中文章节正则（兼容 Markdown # heading）
 _RE_CN_CHAPTER = re.compile(
-    r"^\s*(?:第[零一二三四五六七八九十百千万\d]+[章回节卷])\s*.+",
+    r"^\s*(?:#+\s*)?(?:第[零一二三四五六七八九十百千万\d]+[章回节卷])\s*.+",
     re.MULTILINE,
 )
 # 中文卷
