@@ -60,7 +60,13 @@ python -m src.cli launch
 # 指定端口启动Wed UI
 python -m src.cli launch --port 8080
 ```
-
+#### 基本图片介绍
+- 主要分为4个板块 输入板块 输出(错误提示板块) 时间线展示板块 修改预览板块
+![alt text](./ReadImage/image.png) 
+- 使用时间线卡片方便用户查看 支持修改 再导出
+![alt text](./ReadImage/展示YAML.gif)
+- 支持设置板块 仅展示用户认为重要的展示 方便快速预览
+![alt text](./ReadImage/展示设置.gif)
 ### 主分支
 
 基于AI LLM 模型转换，基于用户输入的文本生成结构化 YAML 剧本,使用gradioWedUI进行可视化(后被HTML代替),支持CLI + 页面两种操作模式
