@@ -59,14 +59,24 @@ python -m src.cli launch
 
 # 指定端口启动Wed UI
 python -m src.cli launch --port 8080
+
+# 命令行批量转换文件夹内所有小说
+python -m src.cli batch ./novels/ -o ./output
+python -m src.cli batch ./novels/ -o ./output -m deepseek -a "原作者"
+python -m src.cli batch ./novels/ -o ./output -r   # 递归扫描子文件夹
 ```
+
+![alt text](./ReadImage命令行多文件.png)
+
 #### 基本图片介绍
+
 - 主要分为4个板块 输入板块 输出(错误提示板块) 时间线展示板块 修改预览板块
-![alt text](./ReadImage/image.png) 
+  ![alt text](./ReadImage/image.png)
 - 使用时间线卡片方便用户查看 支持修改 再导出
-![alt text](./ReadImage/展示YAML.gif)
+  ![alt text](./ReadImage/展示YAML.gif)
 - 支持设置板块 仅展示用户认为重要的展示 方便快速预览
-![alt text](./ReadImage/展示设置.gif)
+  ![alt text](./ReadImage/展示设置.gif)
+
 ### 主分支
 
 基于AI LLM 模型转换，基于用户输入的文本生成结构化 YAML 剧本,使用gradioWedUI进行可视化(后被HTML代替),支持CLI + 页面两种操作模式
@@ -297,7 +307,8 @@ novel-to-script/
 
 ##### 个人后期完善点(面试官不用看)
 
-未实现部分(没时间了我去) 
+未实现部分(没时间了我去)
+
 1. 添加 命令行批量操作文件夹里面的.txt/.md/.epub 指定输出目录
 2. 设置模块大改 不再只是预览模式筛选呈现,属性添加,修改等功能 相当于直接修改提示词来告诉AI我要哪些属性,属性名称规定以及描写
-等我完成最近考试再来写
+   等我完成最近考试再来写

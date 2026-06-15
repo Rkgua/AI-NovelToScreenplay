@@ -7,3 +7,5 @@ output/
 *.egg-info/
 dist/
 build/
+tests/
+novels/

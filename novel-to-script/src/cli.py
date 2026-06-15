@@ -14,6 +14,8 @@ from .pipeline import run_and_save
 app = typer.Typer(name="novel2script", help="AI 辅助小说转剧本工具")
 console = Console(force_terminal=False, legacy_windows=False)
 
+_SUPPORTED_SUFFIXES = (".txt", ".md", ".epub")
+
 
 @app.command()
 def convert(
@@ -116,6 +118,82 @@ def launch(
 
     console.print(f"[bold]Web UI starting at: http://127.0.0.1:{port}[/bold]")
     start_server(port=port)
+
+
+@app.command()
+def batch(
+    input_dir: str = typer.Argument(..., help="输入文件夹路径 (含 .txt / .md / .epub)"),
+    output_dir: str = typer.Option("output", "--output", "-o", help="输出文件夹路径"),
+    model: str = typer.Option("deepseek", "--model", "-m", help="LLM 服务商"),
+    author: str = typer.Option("", "--author", "-a", help="共用原作者"),
+    recursive: bool = typer.Option(False, "--recursive", "-r", help="递归扫描子文件夹"),
+) -> None:
+    """批量转换文件夹内所有小说。"""
+    inp = Path(input_dir)
+    if not inp.is_dir():
+        console.print(f"[red]路径不存在或不是文件夹: {input_dir}[/red]")
+        raise typer.Exit(1)
+
+    glob_fn = inp.rglob if recursive else inp.glob
+    files = [f for f in glob_fn("*") if f.is_file() and f.suffix.lower() in _SUPPORTED_SUFFIXES]
+
+    if not files:
+        console.print(f"[red]未找到支持的文件 ({', '.join(_SUPPORTED_SUFFIXES)})[/red]")
+        raise typer.Exit(1)
+
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+
+    total = len(files)
+    console.print(f"[bold]找到 {total} 个文件[/bold]")
+    console.print(f"[bold]Model:[/bold] {model}")
+    console.print(f"[bold]Output:[/bold] {out.resolve()}\n")
+
+    ok, fail = 0, 0
+    config = AppConfig.from_env(model)
+
+    for idx, src in enumerate(files, 1):
+        try:
+            console.print(f"[bold]({idx}/{total})[/bold] {src.name}")
+
+            with console.status("[bold green]Parsing...[/bold green]"):
+                chapters = parse_file(src)
+            if not chapters:
+                console.print(f"  [yellow]Skipping: no chapters detected[/yellow]")
+                fail += 1
+                continue
+
+            console.print(f"  Chapters: {len(chapters)}")
+
+            if len(chapters) < 3:
+                console.print(f"  [yellow]Warning: only {len(chapters)} chapters[/yellow]")
+
+            target = out / f"{src.stem}_screenplay.yaml"
+            meta = {
+                "title": src.stem,
+                "source": src.name,
+                "author": author,
+            }
+
+            def progress_cb(phase: str, cur: int, total_ch: int) -> None:
+                console.print(f"  {phase}")
+
+            sp = run_and_save(chapters, config, str(target), meta=meta, progress=progress_cb)
+
+            scenes = sum(len(a.scenes) for a in sp.structure.acts)
+            beats = sum(len(s.beats) for a in sp.structure.acts for s in a.scenes)
+            dlg = sum(1 for a in sp.structure.acts for s in a.scenes for b in s.beats if b.type == "dialogue")
+
+            console.print(f"  [green]→ {target.name}[/green] "
+                          f"({len(sp.characters)} chars, {len(sp.structure.acts)} acts, "
+                          f"{scenes} scenes, {beats} beats, {dlg} dialogues)\n")
+            ok += 1
+
+        except Exception as e:
+            console.print(f"  [red]Failed: {e}[/red]\n")
+            fail += 1
+
+    console.print(f"[bold]Done![/bold] 成功: [green]{ok}[/green], 失败: [red]{fail}[/red]")
 
 
 def _filter_chapters(all_chapters, spec: str):
