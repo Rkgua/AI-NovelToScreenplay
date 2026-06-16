@@ -64,7 +64,7 @@ python -m src.cli batch ./novels/ -o ./output -m deepseek -a "原作者"
 python -m src.cli batch ./novels/ -o ./output -r   # 递归扫描子文件夹
 ```
 
-![alt text](./ReadImage命令行多文件.png)
+![alt text](./ReadImage/命令行多文件.png)
 
 #### 基本图片介绍
 
